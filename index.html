@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>はこのかたちをしらべよう！ - 小学校2年生の算数</title>
+  <style>
+    :root {
+      --primary-color: #ff9800;
+      --primary-dark: #f57c00;
+      --bg-color: #f7fafc;
+      --card-bg: rgba(255, 255, 255, 0.94);
+      --text-main: #2d3748;
+      --accent-green: #48bb78;
+      --accent-blue: #4299e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "BIZ UDPGothic", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* 3Dキャンバス */
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* UIオーバーレイ */
+    .ui-overlay {
+      position: absolute;
+      z-index: 10;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* 上部バー */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .shape-selector {
+      display: flex;
+      background: var(--card-bg);
+      padding: 6px;
+      border-radius: 40px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      gap: 6px;
+    }
+
+    .btn-tab {
+      background: none;
+      border: 2px solid transparent;
+      padding: 10px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      color: #718096;
+      transition: all 0.2s;
+    }
+
+    .btn-tab.active {
+      background: var(--primary-color);
+      color: white;
+      box-shadow: 0 3px 8px rgba(255, 152, 0, 0.35);
+    }
+
+    /* 右上：探検カウンターカード */
+    .counter-card {
+      background: var(--card-bg);
+      border: 3px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 12px 20px;
+      text-align: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      min-width: 180px;
+    }
+
+    .counter-title {
+      font-size: 14px;
+      color: #718096;
+      font-weight: bold;
+    }
+
+    .counter-number {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--primary-dark);
+    }
+
+    /* 下部コントロールエリア */
+    .bottom-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    /* モード切替タブ */
+    .mode-bar {
+      display: flex;
+      background: var(--card-bg);
+      border-radius: 35px;
+      padding: 6px;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    .btn-mode {
+      background: #edf2f7;
+      border: none;
+      padding: 12px 24px;
+      font-size: 17px;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      color: #4a5568;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 54px;
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    .btn-mode.active {
+      background: var(--accent-blue);
+      color: white;
+      transform: scale(1.04);
+    }
+
+    /* 展開スライダーバー */
+    .slider-card {
+      background: var(--card-bg);
+      padding: 14px 22px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    .slider-label {
+      font-size: 16px;
+      font-weight: bold;
+      white-space: nowrap;
+      color: #4a5568;
+    }
+
+    input[type=range] {
+      flex: 1;
+      height: 14px;
+      border-radius: 7px;
+      background: #e2e8f0;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .btn-toggle-unfold {
+      background: #ecc94b;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+      color: #744210;
+      white-space: nowrap;
+    }
+
+    /* フローティング補助ボタン */
+    .fab-reset {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      background: white;
+      border: 2px solid #cbd5e0;
+      padding: 12px 18px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #4a5568;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* クリア祝賀メッセージ */
+    .celebration {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: rgba(255, 255, 255, 0.96);
+      border: 5px solid #ecc94b;
+      border-radius: 24px;
+      padding: 24px 36px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .celebration.show {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .celebration h2 {
+      font-size: 28px;
+      color: #d69e2e;
+      margin-bottom: 6px;
+    }
+
+    ruby rt {
+      font-size: 0.6em;
+      color: #718096;
+    }
+  </style>
+  <!-- Three.js (r128) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <div class="ui-overlay">
+    <!-- 上部ヘッダー -->
+    <div class="top-bar">
+      <div class="shape-selector interactive">
+        <button class="btn-tab active" id="btn-cube" onclick="setBoxType('cube')">
+          <ruby>立方体<rt>りっぽうたい</rt></ruby>（さいころ）
+        </button>
+        <button class="btn-tab" id="btn-cuboid" onclick="setBoxType('cuboid')">
+          <ruby>直方体<rt>ちょくほうたい</rt></ruby>（ティッシュばこ）
+        </button>
+      </div>
+
+      <div class="counter-card interactive">
+        <div class="counter-title" id="counter-label">みつけた <ruby>頂点<rt>ちょうてん</rt></ruby></div>
+        <div class="counter-number"><span id="count-current">0</span> / <span id="count-total">8</span></div>
+      </div>
+    </div>
+
+    <!-- 達成演出アラート -->
+    <div class="celebration" id="celebration-box">
+      <h2>🎉 はなまる！</h2>
+      <p id="celebration-msg">ぜんぶの ちょう点を みつけたね！</p>
+    </div>
+
+    <!-- カメラリセットボタン -->
+    <button class="fab-reset interactive" onclick="resetCamera()">
+      🔄 <ruby>正面<rt>しょうめん</rt></ruby>にもどす
+    </button>
+
+    <!-- 下部コントロール -->
+    <div class="bottom-controls">
+      <!-- 調査モード選択 -->
+      <div class="mode-bar interactive">
+        <button class="btn-mode active" id="mode-vertex" onclick="setInspectMode('vertex')">
+          ★ <ruby>頂点<rt>ちょうてん</rt></ruby>をさがす (8)
+        </button>
+        <button class="btn-mode" id="mode-edge" onclick="setInspectMode('edge')">
+          ━ <ruby>辺<rt>へん</rt></ruby>をさがす (12)
+        </button>
+        <button class="btn-mode" id="mode-face" onclick="setInspectMode('face')">
+          ▨ <ruby>面<rt>めん</rt></ruby>をさがす (6)
+        </button>
+      </div>
+
+      <!-- パタンパタン展開バー -->
+      <div class="slider-card interactive">
+        <span class="slider-label">くみたてる</span>
+        <input type="range" id="unfold-slider" min="0" max="1" step="0.005" value="0" oninput="onSliderMove(this.value)">
+        <span class="slider-label">ひらく</span>
+        <button class="btn-toggle-unfold" onclick="toggleUnfold()">パタン！と<ruby>開閉<rt>かいへい</rt></ruby></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. 音声合成エンジン (Web Audio API: 外部アセット不要)
+       ========================================================================== */
+    class MathSoundEffects {
+      constructor() {
+        this.ctx = null;
+        // C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, G5 (12音階)
+        this.scaleNotes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99];
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      }
+
+      // 見つけたときの音（見つけた数に応じて音階が上昇）
+      playFindTone(index) {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const freq = this.scaleNotes[index % this.scaleNotes.length];
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.35);
+      }
+
+      // コンプリート時のファンファーレ
+      playFanfare() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.12);
+          gain.gain.setValueAtTime(0.3, now + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.12);
+          osc.stop(now + i * 0.12 + 0.6);
+        });
+      }
+    }
+
+    const sound = new MathSoundEffects();
+
+    /* ==========================================================================
+       2. 3Dシーン＆カメラセットアップ
+       ========================================================================== */
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f4f8);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    const initialCamPos = new THREE.Vector3(5, 5, 8);
+    camera.position.copy(initialCamPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // ライティング
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(6, 12, 8);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // 接地ソフトシャドウ
+    const shadowGeo = new THREE.PlaneGeometry(10, 10);
+    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.15 });
+    const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = -2.2;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* ==========================================================================
+       3. アプリの状態管理
+       ========================================================================== */
+    let currentBoxType = 'cube';   // 'cube' or 'cuboid'
+    let currentMode = 'vertex';    // 'vertex', 'edge', 'face'
+    let unfoldAmount = 0.0;        // 0.0 (箱) -> 1.0 (展開図)
+
+    const state = {
+      foundVertices: new Set(),
+      foundEdges: new Set(),
+      foundFaces: new Set()
+    };
+
+    let boxRoot = new THREE.Group();
+    scene.add(boxRoot);
+
+    // ヒンジ構造ピボット参照
+    let hinges = {
+      back: null,
+      front: null,
+      left: null,
+      right: null,
+      top: null
+    };
+
+    // レイキャスト判定リスト
+    let hitColliders = [];
+
+    // マテリアル定義
+    const mats = {
+      // 視覚マテリアル
+      faceDefault: new THREE.MeshStandardMaterial({ color: 0x63b3ed, side: THREE.DoubleSide, roughness: 0.4 }),
+      facePairA: new THREE.MeshStandardMaterial({ color: 0x48bb78, side: THREE.DoubleSide }), // 底面・天面
+      facePairB: new THREE.MeshStandardMaterial({ color: 0xed8936, side: THREE.DoubleSide }), // 前面・後面
+      facePairC: new THREE.MeshStandardMaterial({ color: 0x9f7aea, side: THREE.DoubleSide }), // 左面・右面
+      faceDiscovered: new THREE.MeshStandardMaterial({ color: 0x38a169, side: THREE.DoubleSide }),
+
+      vertexNormal: new THREE.MeshStandardMaterial({ color: 0xd69e2e, roughness: 0.2 }),
+      vertexFound: new THREE.MeshStandardMaterial({ color: 0xe53e3e, emissive: 0xc53030 }),
+
+      edgeNormal: new THREE.MeshStandardMaterial({ color: 0xa0aec0, roughness: 0.5 }),
+      edgeFound: new THREE.MeshStandardMaterial({ color: 0x319795, emissive: 0x285e61 }),
+
+      // 拡大判定用の完全透明コライダー
+      hitCollider: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false })
+    };
+
+    /* ==========================================================================
+       4. 箱の生成（ヒンジ階層＆判定拡大コライダー）
+       ========================================================================== */
+    function buildBox() {
+      // 既存オブジェクトのクリーンアップ
+      while (boxRoot.children.length > 0) {
+        boxRoot.remove(boxRoot.children[0]);
+      }
+      hitColliders = [];
+      state.foundVertices.clear();
+      state.foundEdges.clear();
+      state.foundFaces.clear();
+
+      // サイズ定義（小学2年でわかりやすい比率）
+      // 立方体: 2.4 x 2.4 x 2.4 / 直方体: 3.2(幅) x 1.8(高) x 2.2(奥)
+      const w = (currentBoxType === 'cube') ? 2.4 : 3.2;
+      const h = (currentBoxType === 'cube') ? 2.4 : 1.8;
+      const d = (currentBoxType === 'cube') ? 2.4 : 2.2;
+
+      /* --- A. 展開可能な面のツリー構築 --- */
+      const baseFaceGroup = createFaceMesh(w, d, mats.facePairA, 'face', 0, 'そこ（底面）');
+      boxRoot.add(baseFaceGroup);
+
+      // 後面ピボット（底面の奥辺に配置）
+      hinges.back = new THREE.Group();
+      hinges.back.position.set(0, 0, -d / 2);
+      baseFaceGroup.add(hinges.back);
+      const backMesh = createFaceMesh(w, h, mats.facePairB, 'face', 1, 'うしろ（後面）');
+      backMesh.position.set(0, h / 2, 0);
+      backMesh.rotation.x = Math.PI / 2;
+      hinges.back.add(backMesh);
+
+      // 天面ピボット（後面の先端辺に配置: 第2階層ヒンジ）
+      hinges.top = new THREE.Group();
+      hinges.top.position.set(0, h, 0);
+      hinges.back.add(hinges.top);
+      const topMesh = createFaceMesh(w, d, mats.facePairA, 'face', 2, 'ふた（天面）');
+      topMesh.position.set(0, d / 2, 0);
+      topMesh.rotation.x = 0;
+      hinges.top.add(topMesh);
+
+      // 前面ピボット（底面の手前辺）
+      hinges.front = new THREE.Group();
+      hinges.front.position.set(0, 0, d / 2);
+      baseFaceGroup.add(hinges.front);
+      const frontMesh = createFaceMesh(w, h, mats.facePairB, 'face', 3, 'まえ（前面）');
+      frontMesh.position.set(0, h / 2, 0);
+      frontMesh.rotation.x = -Math.PI / 2;
+      hinges.front.add(frontMesh);
+
+      // 左面ピボット（底面の左辺）
+      hinges.left = new THREE.Group();
+      hinges.left.position.set(-w / 2, 0, 0);
+      baseFaceGroup.add(hinges.left);
+      const leftMesh = createFaceMesh(d, h, mats.facePairC, 'face', 4, 'ひだり（左面）');
+      leftMesh.position.set(0, h / 2, 0);
+      leftMesh.rotation.set(Math.PI / 2, -Math.PI / 2, 0, 'YXZ');
+      hinges.left.add(leftMesh);
+
+      // 右面ピボット（底面の右辺）
+      hinges.right = new THREE.Group();
+      hinges.right.position.set(w / 2, 0, 0);
+      baseFaceGroup.add(hinges.right);
+      const rightMesh = createFaceMesh(d, h, mats.facePairC, 'face', 5, 'みぎ（右面）');
+      rightMesh.position.set(0, h / 2, 0);
+      rightMesh.rotation.set(Math.PI / 2, Math.PI / 2, 0, 'YXZ');
+      hinges.right.add(rightMesh);
+
+      /* --- B. 頂点（8個）の生成 --- */
+      const hw = w / 2, hh = h / 2, hd = d / 2;
+      const cornerPoints = [
+        [-hw, -hh, -hd], [ hw, -hh, -hd], [ hw,  hh, -hd], [-hw,  hh, -hd],
+        [-hw, -hh,  hd], [ hw, -hh,  hd], [ hw,  hh,  hd], [-hw,  hh,  hd]
+      ];
+
+      // 視覚用の小さな球 (r=0.1) と、判定用の大きな球 (r=0.42: 4倍以上拡大)
+      const vVisualGeo = new THREE.SphereGeometry(0.1, 16, 16);
+      const vHitGeo = new THREE.SphereGeometry(0.42, 12, 12);
+
+      cornerPoints.forEach((pos, idx) => {
+        const vGroup = new THREE.Group();
+        vGroup.position.set(pos[0], pos[1] + hh, pos[2]); // 底面を基準にY座標補正
+
+        const visual = new THREE.Mesh(vVisualGeo, mats.vertexNormal);
+        vGroup.add(visual);
+
+        const hit = new THREE.Mesh(vHitGeo, mats.hitCollider);
+        hit.userData = { type: 'vertex', id: idx, visualMesh: visual };
+        vGroup.add(hit);
+
+        boxRoot.add(vGroup);
+        hitColliders.push(hit);
+      });
+
+      /* --- C. 辺（12本）の生成 --- */
+      const edgeDefs = [
+        // X平行 (4本)
+        [[-hw, 0, -hd], [hw, 0, -hd]], [[-hw, h, -hd], [hw, h, -hd]],
+        [[-hw, 0,  hd], [hw, 0,  hd]], [[-hw, h,  hd], [hw, h,  hd]],
+        // Y平行 (4本)
+        [[-hw, 0, -hd], [-hw, h, -hd]], [[hw, 0, -hd], [hw, h, -hd]],
+        [[-hw, 0,  hd], [-hw, h,  hd]], [[hw, 0,  hd], [hw, h,  hd]],
+        // Z平行 (4本)
+        [[-hw, 0, -hd], [-hw, 0, hd]], [[hw, 0, -hd], [hw, 0, hd]],
+        [[-hw, h, -hd], [-hw, h, hd]], [[hw, h, -hd], [hw, h, hd]]
+      ];
+
+      const edgeVisualRadius = 0.035;
+      const edgeHitRadius = 0.28; // 太い判定用シリンダー（8倍拡大）
+
+      edgeDefs.forEach(([p1, p2], idx) => {
+        const v1 = new THREE.Vector3(...p1);
+        const v2 = new THREE.Vector3(...p2);
+        const len = v1.distanceTo(v2);
+        const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+
+        const eGroup = new THREE.Group();
+        eGroup.position.copy(mid);
+
+        // 円柱を2点間の向きに回転
+        const dir = new THREE.Vector3().subVectors(v2, v1).normalize();
+        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+
+        const visGeo = new THREE.CylinderGeometry(edgeVisualRadius, edgeVisualRadius, len, 8);
+        const visual = new THREE.Mesh(visGeo, mats.edgeNormal);
+        visual.quaternion.copy(quat);
+        eGroup.add(visual);
+
+        const hitGeo = new THREE.CylinderGeometry(edgeHitRadius, edgeHitRadius, len, 8);
+        const hit = new THREE.Mesh(hitGeo, mats.hitCollider);
+        hit.quaternion.copy(quat);
+        hit.userData = { type: 'edge', id: idx, visualMesh: visual };
+        eGroup.add(hit);
+
+        boxRoot.add(eGroup);
+        hitColliders.push(hit);
+      });
+
+      updateUnfold(unfoldAmount);
+      updateCounterDisplay();
+    }
+
+    // 面メッシュと当たり判定プレーンの生成ヘルパー
+    function createFaceMesh(width, height, material, type, id, name) {
+      const g = new THREE.Group();
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
+      mesh.rotation.x = -Math.PI / 2; // 水平に倒す
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+
+      // 面の当たり判定コライダー
+      const hit = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mats.hitCollider);
+      hit.rotation.x = -Math.PI / 2;
+      hit.userData = { type: 'face', id: id, name: name, visualMesh: mesh };
+      g.add(hit);
+      hitColliders.push(hit);
+
+      return g;
+    }
+
+    /* ==========================================================================
+       5. 展開・組み立てアニメーション更新
+       ========================================================================== */
+    function updateUnfold(t) {
+      unfoldAmount = t;
+      const angle = t * (Math.PI / 2);
+
+      if (hinges.back) hinges.back.rotation.x = -angle;
+      if (hinges.front) hinges.front.rotation.x = angle;
+      if (hinges.left) hinges.left.rotation.z = angle;
+      if (hinges.right) hinges.right.rotation.z = -angle;
+      if (hinges.top) hinges.top.rotation.x = -angle;
+
+      // 展開時は頂点・辺の視覚要素をフェードアウト（展開図で混乱するのを防止）
+      const alpha = 1.0 - t;
+      boxRoot.children.forEach(child => {
+        if (child.userData && (child.userData.type === 'vertex' || child.userData.type === 'edge')) {
+          child.visible = (alpha > 0.1);
+        }
+      });
+    }
+
+    function onSliderMove(val) {
+      updateUnfold(parseFloat(val));
+    }
+
+    function toggleUnfold() {
+      const target = (unfoldAmount > 0.5) ? 0.0 : 1.0;
+      const start = unfoldAmount;
+      const duration = 500;
+      const startTime = performance.now();
+
+      function step(now) {
+        const progress = Math.min((now - startTime) / duration, 1.0);
+        // イージング
+        const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+        const current = start + (target - start) * ease;
+        updateUnfold(current);
+        document.getElementById('unfold-slider').value = current;
+
+        if (progress < 1.0) {
+          requestAnimationFrame(step);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    /* ==========================================================================
+       6. タップ＆インタラクション判定（優先度つき）
+       ========================================================================== */
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onPointerDown(e) {
+      // UI要素のクリックは無視
+      if (e.target.closest('.interactive')) return;
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      mouse.x = (clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      // 現在の探検モードに応じたコライダーのみをフィルタ
+      const activeTargets = hitColliders.filter(h => h.userData.type === currentMode);
+      const intersects = raycaster.intersectObjects(activeTargets, false);
+
+      if (intersects.length > 0) {
+        const targetData = intersects[0].object.userData;
+        handleDiscovery(targetData);
+      }
+    }
+
+    function handleDiscovery(data) {
+      let isNew = false;
+      let currentIndex = 0;
+
+      if (data.type === 'vertex') {
+        if (!state.foundVertices.has(data.id)) {
+          state.foundVertices.add(data.id);
+          data.visualMesh.material = mats.vertexFound;
+          isNew = true;
+        }
+        currentIndex = state.foundVertices.size;
+      } else if (data.type === 'edge') {
+        if (!state.foundEdges.has(data.id)) {
+          state.foundEdges.add(data.id);
+          data.visualMesh.material = mats.edgeFound;
+          isNew = true;
+        }
+        currentIndex = state.foundEdges.size;
+      } else if (data.type === 'face') {
+        if (!state.foundFaces.has(data.id)) {
+          state.foundFaces.add(data.id);
+          data.visualMesh.material = mats.faceDiscovered;
+          isNew = true;
+        }
+        currentIndex = state.foundFaces.size;
+      }
+
+      // 「ポンッ」とバウンスする演出
+      triggerBounce(data.visualMesh);
+
+      if (isNew) {
+        sound.playFindTone(currentIndex - 1);
+        updateCounterDisplay();
+        checkCompletion();
+      }
+    }
+
+    function triggerBounce(mesh) {
+      const origScale = mesh.scale.clone();
+      mesh.scale.multiplyScalar(1.8);
+      const start = performance.now();
+
+      function anim(now) {
+        const p = Math.min((now - start) / 200, 1.0);
+        const s = 1.8 - 0.8 * p;
+        mesh.scale.set(origScale.x * s, origScale.y * s, origScale.z * s);
+        if (p < 1.0) requestAnimationFrame(anim);
+      }
+      requestAnimationFrame(anim);
+    }
+
+    function updateCounterDisplay() {
+      let current = 0;
+      let total = 0;
+      const labelElem = document.getElementById('counter-label');
+
+      if (currentMode === 'vertex') {
+        current = state.foundVertices.size;
+        total = 8;
+        labelElem.innerHTML = 'みつけた <ruby>頂点<rt>ちょうてん</rt></ruby>';
+      } else if (currentMode === 'edge') {
+        current = state.foundEdges.size;
+        total = 12;
+        labelElem.innerHTML = 'みつけた <ruby>辺<rt>へん</rt></ruby>';
+      } else {
+        current = state.foundFaces.size;
+        total = 6;
+        labelElem.innerHTML = 'みつけた <ruby>面<rt>めん</rt></ruby>';
+      }
+
+      document.getElementById('count-current').innerText = current;
+      document.getElementById('count-total').innerText = total;
+    }
+
+    function checkCompletion() {
+      let isClear = false;
+      let msg = "";
+
+      if (currentMode === 'vertex' && state.foundVertices.size === 8) {
+        isClear = true;
+        msg = "8この ちょう点を ぜんぶ みつけたね！";
+      } else if (currentMode === 'edge' && state.foundEdges.size === 12) {
+        isClear = true;
+        msg = "12ほんの へんを ぜんぶ みつけたね！";
+      } else if (currentMode === 'face' && state.foundFaces.size === 6) {
+        isClear = true;
+        msg = "6つの めんを ぜんぶ みつけたね！";
+      }
+
+      if (isClear) {
+        sound.playFanfare();
+        const popup = document.getElementById('celebration-box');
+        document.getElementById('celebration-msg').innerText = msg;
+        popup.classList.add('show');
+        setTimeout(() => popup.classList.remove('show'), 3500);
+      }
+    }
+
+    /* ==========================================================================
+       7. UI切り替えとカメラ制御
+       ========================================================================== */
+    function setBoxType(type) {
+      currentBoxType = type;
+      document.getElementById('btn-cube').classList.toggle('active', type === 'cube');
+      document.getElementById('btn-cuboid').classList.toggle('active', type === 'cuboid');
+      buildBox();
+    }
+
+    function setInspectMode(mode) {
+      currentMode = mode;
+      document.getElementById('mode-vertex').classList.toggle('active', mode === 'vertex');
+      document.getElementById('mode-edge').classList.toggle('active', mode === 'edge');
+      document.getElementById('mode-face').classList.toggle('active', mode === 'face');
+      updateCounterDisplay();
+    }
+
+    function resetCamera() {
+      camera.position.copy(initialCamPos);
+      camera.lookAt(0, 0, 0);
+      boxRoot.rotation.set(0, 0, 0);
+    }
+
+    // 自由回転（タッチドラッグ＆マウスドラッグ）
+    let isDragging = false;
+    let prevMousePos = { x: 0, y: 0 };
+
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.interactive')) return;
+      isDragging = true;
+      prevMousePos = { x: e.clientX, y: e.clientY };
+      onPointerDown(e);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - prevMousePos.x;
+      const deltaY = e.clientY - prevMousePos.y;
+
+      boxRoot.rotation.y += deltaX * 0.008;
+      boxRoot.rotation.x += deltaY * 0.008;
+
+      prevMousePos = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('pointerup', () => { isDragging = false; });
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================================
+       8. 初期化とアニメーションループ
+       ========================================================================== */
+    buildBox();
+    camera.lookAt(0, 0, 0);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
